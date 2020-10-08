@@ -8,14 +8,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collection;
+import java.util.List;
 
 
 public class ClientGUI extends JFrame implements ActionListener, Thread.UncaughtExceptionHandler, MessageSocketThreadListener {
@@ -113,8 +113,12 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
             try {
                 // используем для подключения поля ipAdress и порт
                 socket = new Socket(ipAddressField.getText(), Integer.parseInt(portField.getText()));
-                socketThread = new MessageSocketThread(this, "Client " + loginField.getText(), socket);
-
+                String user = loginField.getText();
+                socketThread = new MessageSocketThread(this, "Client " + user, socket);
+                Collection<String> lines = read(user,10);
+                for (String line : lines) {
+                    chatArea.append(line + '\n');
+                }
             } catch (IOException ioException) {
                 showError(ioException.getMessage());
             }
@@ -188,7 +192,6 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
         setTitle(WINDOW_TITLE);
         listUsers.setListData(new String[0]);
     }
-
     /*
      * Получение сообщений от сервера
      */
@@ -242,6 +245,28 @@ public class ClientGUI extends JFrame implements ActionListener, Thread.Uncaught
                 break;
             default:
                 throw  new RuntimeException("Unknown message" + msg);
+        }
+    }
+
+    static Collection<String> read(String user, int linesNumber) {
+        File fileToRead = new File(user + "-history.txt");
+        try (FileReader rd = new FileReader(fileToRead);
+             BufferedReader br = new BufferedReader(rd)) {
+            java.util.List<String> lines = new ArrayList<>();
+            String str;
+            while ((str = br.readLine()) != null) {
+                lines.add(str);
+            }
+
+            List<String> lastLines = new ArrayList<>();
+            int start =   Math.max(0, lines.size() - linesNumber);
+            for (int i = start; i < lines.size(); i++) {
+                lastLines.add(lines.get(i));
+            }
+
+            return lastLines;
+        } catch (Exception e) {
+            throw new RuntimeException("SWW", e);
         }
     }
 }
